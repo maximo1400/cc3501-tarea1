@@ -33,25 +33,25 @@ if __name__ == '__main__':
     glfw.set_key_callback(window, controlador.on_key)
 
     # Assembling the shader program (pipeline) with both shaders
-    pipeline = es.SimpleTransformShaderProgram()
+    pipeline_color = es.SimpleTransformShaderProgram()
+    pipeline_texture = es.SimpleTextureTransformShaderProgram()
 
     # Telling OpenGL to use our shader program
-    glUseProgram(pipeline.shaderProgram)
+    glUseProgram(pipeline_color.shaderProgram)
 
     # Setting up the clear screen color
     glClearColor(0.85, 0.85, 0.85, 1.0)
 
-    # Our shapes here are always fully painted
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
+    # Enabling transparencies
+    glEnable(GL_BLEND)
+    # glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 
     # HACEMOS LOS OBJETOS
     size_input = int(sys.argv[1])
-    if size_input >= 10 or size_input <= 50:
-        game_map = Map(size_input)
-    else:
+    if size_input < 10 or size_input > 50:
         size_input = 10
-        game_map = Map(size_input)
 
+    game_map = Map(size_input)
     snake = SnakeLogic(size_input)
     apple = Apple(size_input)
 
@@ -66,7 +66,7 @@ if __name__ == '__main__':
         ti = glfw.get_time()
         dt = ti - t0
 
-        time.sleep(np.abs(0.25 - dt))
+        time.sleep(np.abs(0.2 - dt))
         t0 = ti
 
         # Using GLFW to check for input events
@@ -78,11 +78,13 @@ if __name__ == '__main__':
         # Reconocer la logica
         snake.move()
         snake.collide(apple, game_map)
+        snake_drawing = SnakeMaker(snake)
 
         # DIBUJAR LOS MODELOS
-        game_map.draw(pipeline)
-        SnakeMaker(snake).draw(pipeline)
-        apple.draw(pipeline)
+        game_map.draw(pipeline_color)
+        SnakeMaker(snake).draw(pipeline_texture)
+        # pipeline_color.drawShape(snake_drawing.model)
+        apple.draw(pipeline_color)
 
         # Once the render is done, buffers are swapped, showing only the complete scene.
         glfw.swap_buffers(window)

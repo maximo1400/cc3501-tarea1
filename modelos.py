@@ -4,7 +4,7 @@ import scene_graph as sg
 import easy_shaders as es
 import numpy as np
 
-from OpenGL.GL import glClearColor
+from OpenGL.GL import *
 import random
 
 # direcciones
@@ -20,7 +20,7 @@ class Map(object):
         gpu_border_quad = es.toGPUShape(bs.createColorQuad(1, 0, 0))
 
         table = sg.SceneGraphNode('table')
-        table.transform = tr.uniformScale(size / (size + 2))
+        table.transform = tr.uniformScale((size + 1) / (size + 2))
         table.childs += [gpu_table_quad]
 
         border = sg.SceneGraphNode('border')
@@ -40,12 +40,13 @@ class Map(object):
 
     def inside_borders(self, snake):
         x, y = snake.pos[0]
-        if 0 < x < self.size - 2 and 0 < y < self.size - 2:
+        if 0 < x < self.size - 1 and 0 < y < self.size - 1:
             return True
-        print(f"Pared en ({x,y})")
+        print(f"Pared en ({x, y})")
         return False
 
     def draw(self, pipeline):
+        glUseProgram(pipeline.shaderProgram)
         sg.drawSceneGraphNode(self.model, pipeline, 'transform')
 
 
@@ -131,11 +132,12 @@ class SnakeLogic(object):
 class SnakeMaker(object):
     def __init__(self, snake_logic):
         # Figuras básicas
-        # gpu_head_quad = es.toGPUShape(bs.createTextureQuad("img/robot.png"), GL_REPEAT, GL_NEAREST)
-        # gpu_body_quad = es.toGPUShape(bs.createTextureQuad("img/body.png"), GL_REPEAT, GL_NEAREST)
+        gpu_head_quad = es.toGPUShape(bs.createTextureQuad("img/robot.png"), GL_REPEAT,
+                                      GL_NEAREST)  # GL_CLAMP_TO_BORDER
+        gpu_body_quad = es.toGPUShape(bs.createTextureQuad("img/body.png"), GL_REPEAT, GL_NEAREST)
 
-        gpu_head_quad = es.toGPUShape(bs.createColorQuad(0, 0, 1))
-        gpu_body_quad = es.toGPUShape(bs.createColorQuad(1, 0, 1))
+        # gpu_head_quad = es.toGPUShape(bs.createColorQuad(0, 0, 1))
+        # gpu_body_quad = es.toGPUShape(bs.createColorQuad(1, 0, 1))
 
         head = sg.SceneGraphNode('head')
         x, y = snake_logic.pos[0]
@@ -168,7 +170,12 @@ class SnakeMaker(object):
         self.model = transform_snake
 
     def draw(self, pipeline):
-        sg.drawSceneGraphNode(self.model, pipeline, 'transform')
+        glUseProgram(pipeline.shaderProgram)
+        glUniformMatrix4fv(glGetUniformLocation(pipeline.shaderProgram, "transform"), 1, GL_TRUE, tr.identity())
+        sg.drawSceneGraphNode(sg.findNode(self.model, 'snake'), pipeline, "transform")
+
+        # glUniformMatrix4fv(glGetUniformLocation(pipeline.shaderProgram, "transform"), 1, GL_TRUE, tr.identity())
+        # sg.drawSceneGraphNode(self.model, pipeline, 'transform')
 
 
 class Apple(object):
@@ -190,6 +197,7 @@ class Apple(object):
         self.model = apple_tr
 
     def draw(self, pipeline):
+        glUseProgram(pipeline.shaderProgram)
         self.model.transform = tr.matmul([tr.uniformScale(2 / (self.map_size + 2)),
                                           tr.translate(self.pos_x - self.map_size / 2, self.pos_y - self.map_size / 2,
                                                        0)])
