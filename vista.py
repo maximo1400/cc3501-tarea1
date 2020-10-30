@@ -54,14 +54,16 @@ if __name__ == '__main__':
     game_map = Map(size_input)
     snake = SnakeLogic(size_input)
     apple = Apple(size_input)
+    game_over = GameOver()
 
     controlador.set_model(snake)
     controlador.set_apple(apple)
 
     t0 = 0
 
-    while snake.is_alive and not glfw.window_should_close(window):  # Dibujando --> 1. obtener el input
+    while snake.is_alive:  # Dibujando --> 1. obtener el input
 
+        # and not glfw.window_should_close(window)
         # Calculamos el dt
         ti = glfw.get_time()
         dt = ti - t0
@@ -83,10 +85,20 @@ if __name__ == '__main__':
         # DIBUJAR LOS MODELOS
         game_map.draw(pipeline_color)
         SnakeMaker(snake).draw(pipeline_texture)
-        # pipeline_color.drawShape(snake_drawing.model)
         apple.draw(pipeline_color)
 
         # Once the render is done, buffers are swapped, showing only the complete scene.
+        glfw.swap_buffers(window)
+
+    for i in range(0, 1000):
+        ti = glfw.get_time()
+        dt = ti - t0
+
+        time.sleep(np.abs(0.1 - dt))
+        t0 = ti
+
+        glClear(GL_COLOR_BUFFER_BIT)
+        game_over.draw(pipeline_texture, i/100)
         glfw.swap_buffers(window)
 
     print("muricion")

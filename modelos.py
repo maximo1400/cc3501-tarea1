@@ -16,7 +16,7 @@ DOWN = 3
 
 class Map(object):
     def __init__(self, size=10):
-        gpu_table_quad = es.toGPUShape(bs.createColorQuad(0.1, 0.8, 0.1))
+        gpu_table_quad = es.toGPUShape(bs.createColorQuad(0, 1, 0))
         gpu_border_quad = es.toGPUShape(bs.createColorQuad(1, 0, 0))
 
         table = sg.SceneGraphNode('table')
@@ -126,14 +126,13 @@ class SnakeLogic(object):
         if apple.pos_x == x and apple.pos_y == y:
             print("comidacion")
             self.needs_extending = True
-            apple.re_position()
+            apple.re_position(self)
 
 
 class SnakeMaker(object):
     def __init__(self, snake_logic):
         # Figuras básicas
-        gpu_head_quad = es.toGPUShape(bs.createTextureQuad("img/robot.png"), GL_REPEAT,
-                                      GL_NEAREST)  # GL_CLAMP_TO_BORDER
+        gpu_head_quad = es.toGPUShape(bs.createTextureQuad("img/robot.png"), GL_REPEAT, GL_NEAREST)
         gpu_body_quad = es.toGPUShape(bs.createTextureQuad("img/body.png"), GL_REPEAT, GL_NEAREST)
 
         # gpu_head_quad = es.toGPUShape(bs.createColorQuad(0, 0, 1))
@@ -141,7 +140,8 @@ class SnakeMaker(object):
 
         head = sg.SceneGraphNode('head')
         x, y = snake_logic.pos[0]
-        head.transform = tr.translate(x - snake_logic.map_size / 2, y - snake_logic.map_size / 2, 0)
+        head.transform = tr.matmul([tr.translate(x - snake_logic.map_size / 2, y - snake_logic.map_size / 2, 0),
+                                    tr.rotationZ(snake_logic.dir * np.pi / 2)])
         head.childs += [gpu_head_quad]
 
         # Cuerpo generico
@@ -153,7 +153,6 @@ class SnakeMaker(object):
         snake.transform = tr.uniformScale(2 / (snake_logic.map_size + 2))
         snake.childs += [head]
 
-        x_old, y_old = snake_logic.pos[1]
         snake_len = len(snake_logic.pos)
         body_parts = []
         for bit in range(1, snake_len):
@@ -174,9 +173,6 @@ class SnakeMaker(object):
         glUniformMatrix4fv(glGetUniformLocation(pipeline.shaderProgram, "transform"), 1, GL_TRUE, tr.identity())
         sg.drawSceneGraphNode(sg.findNode(self.model, 'snake'), pipeline, "transform")
 
-        # glUniformMatrix4fv(glGetUniformLocation(pipeline.shaderProgram, "transform"), 1, GL_TRUE, tr.identity())
-        # sg.drawSceneGraphNode(self.model, pipeline, 'transform')
-
 
 class Apple(object):
 
@@ -186,14 +182,27 @@ class Apple(object):
         self.pos_x = 0
         self.re_position()
 
-        gpu_apple = es.toGPUShape(bs.createColorQuad(0, 0, 0))
+        gpu_apple = es.toGPUShape(bs.createColorQuad(1, 1, 0))
+        gpu_stem = es.toGPUShape(bs.createColorQuad(0.3, 0.2, 0.14))
 
-        apple = sg.SceneGraphNode('apple')
-        apple.transform = tr.uniformScale(1)
-        apple.childs += [gpu_apple]
+        apple_1 = sg.SceneGraphNode('apple')
+        apple_1.transform = tr.uniformScale(1)
+        apple_1.childs += [gpu_apple]
+
+        apple_2 = sg.SceneGraphNode('apple')
+        apple_2.transform = tr.rotationZ(np.pi / 4)
+        apple_2.childs += [gpu_apple]
+
+        apple_3 = sg.SceneGraphNode('apple')
+        apple_3.transform = tr.rotationZ(np.pi / 8)
+        apple_3.childs += [gpu_apple]
+
+        apple_stem = sg.SceneGraphNode('apple')
+        apple_stem.transform = tr.matmul([tr.scale(0.2, 0.8, 1), tr.translate(0, 0.5, 0), tr.rotationZ(-np.pi / 10)])
+        apple_stem.childs += [gpu_stem]
 
         apple_tr = sg.SceneGraphNode('appleTR')
-        apple_tr.childs += [apple]
+        apple_tr.childs += [apple_1, apple_2, apple_3, apple_stem]
         self.model = apple_tr
 
     def draw(self, pipeline):
@@ -203,7 +212,31 @@ class Apple(object):
                                                        0)])
         sg.drawSceneGraphNode(self.model, pipeline, "transform")
 
-    def re_position(self):
-        self.pos_x = random.randint(1, self.map_size)
-        self.pos_y = random.randint(1, self.map_size)
-        print(f"New apple:({self.pos_x, self.pos_y})")
+    def re_position(self, snake=None):
+        if snake is not None:
+            while (self.pos_x, self.pos_y) in snake.pos:
+                self.pos_x = random.randint(1, self.map_size)
+                self.pos_y = random.randint(1, self.map_size)
+        else:
+            self.pos_x = random.randint(1, self.map_size)
+            self.pos_y = random.randint(1, self.map_size)
+        print(f"New apple:{self.pos_x, self.pos_y}")
+
+
+class GameOver(object):
+    def __init__(self):
+        gpu_sign = es.toGPUShape(bs.createTextureQuad("img/game_over2.png"), GL_REPEAT, GL_NEAREST)
+
+        sign = sg.SceneGraphNode('sign')
+        sign.transform = tr.uniformScale(2)
+        sign.childs += [gpu_sign]
+
+        transform_sign = sg.SceneGraphNode('signTR')
+        transform_sign.childs += [sign]
+
+        self.model = transform_sign
+
+    def draw(self, pipeline, angle):
+        glUseProgram(pipeline.shaderProgram)
+        self.model.transform = tr.rotationZ(angle)
+        sg.drawSceneGraphNode(self.model, pipeline, "transform")

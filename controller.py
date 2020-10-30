@@ -49,5 +49,5 @@ class Controller(object):
             self.model.turn_down()
 
         # Raton toca la pantalla....
-        else:
-            print('Unknown key')
+        # else:
+            # print('Unknown key')
