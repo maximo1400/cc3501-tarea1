@@ -68,7 +68,7 @@ if __name__ == '__main__':
         ti = glfw.get_time()
         dt = ti - t0
 
-        time.sleep(np.abs(0.2 - dt))
+        time.sleep(np.abs(0.25 - dt))
         t0 = ti
 
         # Using GLFW to check for input events
